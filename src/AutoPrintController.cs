@@ -9,11 +9,13 @@ using UnityEngine;
 namespace ONIStarter
 {
     /// <summary>
-    /// 挂在打印舱上：
-    /// - 给打印舱补一个只用于“自动打印列表”的 Storage + TreeFilterable；
-    /// - 列表只包含补给包，不包含复制人；
-    /// - 有勾选时，打印舱充满后自动打印匹配的补给包；
-    /// - 没有勾选或本次随机结果没有勾选内容时保持原状，不会自动打印。
+    /// Attached to the printing pod:
+    /// - adds a Storage + TreeFilterable used only by the auto-print list;
+    /// - the list contains care packages only, never duplicants;
+    /// - when something is checked, a matching care package is printed
+    ///   automatically once the pod is ready;
+    /// - when nothing is checked, or the current random result contains no
+    ///   checked item, nothing is printed and vanilla behaviour is kept.
     /// </summary>
     public sealed class AutoPrintController : KMonoBehaviour
     {
@@ -37,6 +39,7 @@ namespace ONIStarter
         private bool configLoaded;
         private bool filtersRestored;
         private bool configDirty;
+        private bool updateFailed;
         private float nextTick;
         private float nextSave;
         private List<ITelepadDeliverable> offers;
@@ -49,6 +52,24 @@ namespace ONIStarter
         }
 
         private void Update()
+        {
+            try
+            {
+                UpdateAutoPrint();
+                updateFailed = false;
+            }
+            catch (Exception exception)
+            {
+                // Log one failure instead of spamming the log every frame.
+                if (!updateFailed)
+                {
+                    updateFailed = true;
+                    Debug.LogWarning("[ONI-Starter] Auto-print update failed: " + exception);
+                }
+            }
+        }
+
+        private void UpdateAutoPrint()
         {
             EnsureReady();
 
@@ -88,7 +109,9 @@ namespace ONIStarter
 
             if (ImmigrantScreen.instance != null && ImmigrantScreen.instance.gameObject.activeInHierarchy)
             {
-                // 玩家已经打开原版选人/选包界面时，让玩家自己选，避免后台抢走选项。
+                // If the vanilla duplicant/package selection screen is open,
+                // let the player choose instead of consuming the offer in the
+                // background.
                 return;
             }
 
@@ -117,7 +140,7 @@ namespace ONIStarter
             HashSet<Tag> checkedTags = filter.GetTags();
             if (checkedTags == null || checkedTags.Count == 0)
             {
-                // 没有任何勾选：停止自动打印。
+                // Nothing is checked: stop auto-printing.
                 offers = null;
                 return;
             }
@@ -153,7 +176,8 @@ namespace ONIStarter
 
             if (match == null)
             {
-                // 本次随机结果没有勾选内容：丢弃，保持满仓，下一次再重掷。
+                // The current random result has no checked item: discard it,
+                // keep the pod ready, and roll again next time.
                 offers = null;
                 return;
             }
@@ -195,12 +219,26 @@ namespace ONIStarter
 
             if (storage == null)
             {
-                storage = GetComponent<Storage>();
+                foreach (Storage existing in GetComponents<Storage>())
+                {
+                    if (existing != null && existing.storageID == AutoPrintSetup.PrintStorageId)
+                    {
+                        storage = existing;
+                        break;
+                    }
+                }
             }
 
             if (filter == null)
             {
-                filter = GetComponent<TreeFilterable>();
+                foreach (TreeFilterable existing in GetComponents<TreeFilterable>())
+                {
+                    if (existing != null && existing.storageToFilterTag == AutoPrintSetup.PrintStorageId)
+                    {
+                        filter = existing;
+                        break;
+                    }
+                }
             }
 
             if (!tagsRegistered)
@@ -236,7 +274,9 @@ namespace ONIStarter
                 filter.OnFilterChanged += OnFilterChanged;
                 filtersRestored = true;
 
-                // 旧版本可能保存过复制人 Tag；自动迁移为只保留当前可用的补给包。
+                // Older versions may have saved duplicant tags. Migrate the
+                // list automatically to keep only currently valid care
+                // packages.
                 config.tags = savedTags
                     .Select(tag => tag.Name)
                     .OrderBy(name => name, StringComparer.Ordinal)
@@ -438,8 +478,9 @@ namespace ONIStarter
         }
 
         /// <summary>
-        /// 只生成补给包候选。开启补给包时按原版概率生成 1 或 2 个候选；
-        /// 关闭补给包时没有可自动打印的内容。
+        /// Generates care-package candidates only. When care packages are
+        /// enabled, vanilla probabilities produce one or two candidates. When
+        /// care packages are disabled there is nothing to auto-print.
         /// </summary>
         private static List<ITelepadDeliverable> RollOffers(HashSet<Tag> checkedTags)
         {

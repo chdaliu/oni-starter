@@ -12,8 +12,9 @@ namespace ONIStarter
     }
 
     /// <summary>
-    /// 打印列表保存在用户目录，而不是存档里：
-    /// 同一台机器上的所有存档共用一份勾选列表，也不会因为读旧档而丢失。
+    /// The print list is stored in the user directory rather than inside a
+    /// save file, so every save on the same machine shares one list and the
+    /// list is never lost when an older save is loaded.
     /// </summary>
     public static class PrintListStore
     {

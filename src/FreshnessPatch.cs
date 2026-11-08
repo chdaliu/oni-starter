@@ -3,9 +3,10 @@ using HarmonyLib;
 namespace ONIStarter
 {
     /// <summary>
-    /// 食物/腐烂物始终显示为 100% 新鲜。
-    /// Rottable 的状态机每秒读取 RotValue 并据此决定 Fresh/Stale/Spoiled；
-    /// 这里让读取值始终等于该食物的完整保质期，并在每次腐烂结算后把数值补满。
+    /// Food and rot always show 100% freshness.
+    /// The Rottable state machine reads RotValue every second and uses it to
+    /// decide between Fresh, Stale and Spoiled. This patch always returns the
+    /// full spoil time and refills the value after each rot tick.
     /// </summary>
     [HarmonyPatch(typeof(Rottable.Instance), "get_RotValue")]
     public static class RottableFreshnessGetterPatch
@@ -46,7 +47,8 @@ namespace ONIStarter
 
             if (__instance.def.spoilTime > 0f)
             {
-                // 同步把内部 Amount 也补满，保证提示框、拆分/合并等读取到真实满值。
+                // Refill the internal amount as well so tooltips and stack
+                // splitting/merging read the real full value.
                 __instance.RotValue = __instance.def.spoilTime;
             }
         }

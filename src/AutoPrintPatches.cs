@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -28,7 +29,30 @@ namespace ONIStarter
                 return;
             }
 
-            Storage storage = telepad.GetComponent<Storage>();
+            try
+            {
+                SetupInternal(telepad);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[ONI-Starter] Failed to set up auto-print: " + exception);
+            }
+        }
+
+        private static void SetupInternal(Telepad telepad)
+        {
+            // Reuse only our own storage. Never overwrite an unrelated Storage
+            // that another component or mod may have added to the telepad.
+            Storage storage = null;
+            foreach (Storage existing in telepad.GetComponents<Storage>())
+            {
+                if (existing != null && existing.storageID == PrintStorageId)
+                {
+                    storage = existing;
+                    break;
+                }
+            }
+
             if (storage == null)
             {
                 storage = telepad.gameObject.AddComponent<Storage>();
@@ -70,7 +94,8 @@ namespace ONIStarter
             filter.uiHeight = TreeFilterable.UISideScreenHeight.Tall;
             filter.allResourceFilterLabelString = "勾选后自动打印";
 
-            // 只把这个 Storage 当作列表数据源，不参与真正的搬运/存储。
+            // This Storage is only a data source for the list; it does not
+            // participate in actual hauling or storage.
             storage.enabled = false;
 
             AutoPrintController controller = telepad.GetComponent<AutoPrintController>();
@@ -81,7 +106,8 @@ namespace ONIStarter
 
             controller.Initialize(telepad, storage, filter);
 
-            // 尽量在玩家打开侧屏前把补给包列表准备好；失败时控制器会在 Update 中重试。
+            // Prepare the care-package list before the side screen opens.
+            // If this fails, the controller retries from Update.
             AutoPrintController.RegisterPrintableTags();
         }
 
@@ -119,7 +145,7 @@ namespace ONIStarter
             GameObject target = AutoPrintSetup.GetSideScreenTarget(__instance);
             if (target != null && target.GetComponent<AutoPrintController>() != null)
             {
-                // 去掉每个物品后面的“0 kg”存储量后缀。
+                // Hide the "0 kg" storage suffix after each item.
                 __result = false;
             }
         }
@@ -149,7 +175,8 @@ namespace ONIStarter
     {
         public static bool Prefix(TreeFilterable __instance)
         {
-            // 打印舱不需要“未设置存储过滤”状态，也不要被染色。
+            // The printing pod does not need the "no storage filter set"
+            // state or its tint.
             if (__instance == null)
             {
                 return true;

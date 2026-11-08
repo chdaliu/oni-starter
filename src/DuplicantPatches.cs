@@ -9,62 +9,83 @@ using UnityEngine;
 namespace ONIStarter
 {
     /// <summary>
-    /// 标准复制人的简化规则：
-    /// 1. 移除负面特质、会禁用工作的特质、会直接授予技能的特质。
-    /// 2. 压力反应统一为无害的大哭（UglyCrier）。
-    /// 3. 只保留一项与职业对应的兴趣；属性点按原版规则计算。
-    /// 4. 清空技能，但起始技能点保持原版。
-    /// 仿生复制人不参与以上任何修改。
+    /// Rules for standard duplicants:
+    /// 1. Replace random traits with three fixed traits: Twinkletoes, StrongArm
+    ///    and DiversLung.
+    /// 2. Remove every other random trait, including negative traits, traits
+    ///    that disable chores, and traits that grant skills.
+    /// 3. Use only the harmless UglyCrier stress reaction.
+    /// 4. Keep a single job-related aptitude; attributes follow vanilla rules.
+    /// 5. Clear learned skills, but keep the vanilla starting skill points.
+    /// Bionic duplicants are left untouched.
     /// </summary>
     public static class DuplicantSanitizer
     {
-        private static readonly HashSet<string> KeepBeneficial = new HashSet<string>(StringComparer.Ordinal)
+        private static readonly string[] FixedTraitIds =
         {
-            "SunnyDisposition",
-            "Regeneration",
-            "DeeperDiversLungs",
-            "RockCrusher"
+            "Twinkletoes",
+            "StrongArm",
+            "DiversLung"
         };
 
-        public static void SanitizeStartingStats(MinionStartingStats stats)
+        public static int SanitizeGeneratedTraits(
+            MinionStartingStats stats,
+            List<ChoreGroup> disabledChoreGroups,
+            int statDelta)
         {
             if (stats == null || stats.personality == null)
             {
-                return;
+                return statDelta;
             }
 
             if (!StarterSettings.SimplifyDuplicants)
             {
-                return;
+                return statDelta;
             }
 
-            // 仿生复制人目前完全保持原版。
+            // Bionic duplicants are intentionally left untouched.
             if (stats.personality.model == BionicMinionConfig.MODEL)
             {
-                return;
+                return statDelta;
             }
 
+            ApplyFixedTraits(stats);
+
+            // The fixed traits have no random stat bonus, and none of them
+            // disable chore groups. Remove the bonuses that belonged to the
+            // discarded random traits so attributes follow vanilla rules.
+            if (disabledChoreGroups != null)
+            {
+                disabledChoreGroups.Clear();
+            }
+
+            return 0;
+        }
+
+        private static void ApplyFixedTraits(MinionStartingStats stats)
+        {
             string baseTraitId = BaseMinionConfig.GetMinionBaseTraitIDForModel(stats.personality.model);
             List<Trait> kept = new List<Trait>();
-            foreach (Trait trait in stats.Traits)
-            {
-                if (trait == null)
-                {
-                    continue;
-                }
 
-                if (trait.Id == baseTraitId || !IsBlockedTrait(trait))
+            // The base trait is always kept and must stay first.
+            Trait baseTrait = Db.Get().traits.TryGet(baseTraitId);
+            if (baseTrait != null)
+            {
+                kept.Add(baseTrait);
+            }
+
+            // Replace all random traits with the fixed set.
+            foreach (string traitId in FixedTraitIds)
+            {
+                Trait trait = Db.Get().traits.TryGet(traitId);
+                if (trait != null && !kept.Contains(trait))
                 {
                     kept.Add(trait);
                 }
             }
 
             stats.Traits = kept;
-
-            if (stats.congenitaltrait != null && IsBlockedTrait(stats.congenitaltrait))
-            {
-                stats.congenitaltrait = null;
-            }
+            stats.congenitaltrait = null;
 
             Trait uglyCrier = Db.Get().traits.TryGet("UglyCrier");
             if (uglyCrier != null)
@@ -73,7 +94,7 @@ namespace ONIStarter
             }
         }
 
-        public static void SanitizeSpawnedDuplicant(GameObject go)
+        public static void SanitizeSpawnedDuplicant(GameObject go, MinionStartingStats stats = null)
         {
             if (go == null)
             {
@@ -91,7 +112,7 @@ namespace ONIStarter
                 return;
             }
 
-            // 仿生复制人目前完全保持原版。
+            // Bionic duplicants are intentionally left untouched.
             if (identity.model == BionicMinionConfig.MODEL)
             {
                 return;
@@ -102,14 +123,49 @@ namespace ONIStarter
             Klei.AI.Traits traits = go.GetComponent<Klei.AI.Traits>();
             if (traits != null)
             {
+                // Keep only the base trait, the three fixed traits, and the
+                // stress/joy reactions. This also cleans up older saved offers
+                // that still carry random traits.
+                HashSet<string> allowed = new HashSet<string>(StringComparer.Ordinal)
+                {
+                    baseTraitId,
+                    "UglyCrier"
+                };
+
+                foreach (string traitId in FixedTraitIds)
+                {
+                    allowed.Add(traitId);
+                }
+
+                if (stats != null)
+                {
+                    if (stats.stressTrait != null)
+                    {
+                        allowed.Add(stats.stressTrait.Id);
+                    }
+
+                    if (stats.joyTrait != null)
+                    {
+                        allowed.Add(stats.joyTrait.Id);
+                    }
+                }
+
                 foreach (Trait trait in new List<Trait>(traits.TraitList))
                 {
-                    if (trait != null &&
-                        trait.Id != baseTraitId &&
-                        trait.Id != "UglyCrier" &&
-                        IsBlockedTrait(trait))
+                    if (trait != null && !allowed.Contains(trait.Id))
                     {
                         traits.Remove(trait);
+                    }
+                }
+
+                // Ensure the fixed traits are present even if a duplicant was
+                // created through an alternate spawn path.
+                foreach (string traitId in FixedTraitIds)
+                {
+                    Trait fixedTrait = Db.Get().traits.TryGet(traitId);
+                    if (fixedTrait != null && !traits.HasTrait(fixedTrait))
+                    {
+                        traits.Add(fixedTrait);
                     }
                 }
 
@@ -141,63 +197,11 @@ namespace ONIStarter
                 resume.GrantedSkillIDs.Clear();
             }
 
-            // 注意：不要修改 BionicWaterDamageMonitor / BionicWaterStress。
-            // 仿生复制人“遇水漏电”属于基础行为，不是特质，这里保持原版。
+            // Do not modify BionicWaterDamageMonitor / BionicWaterStress.
+            // The bionic "water damage" behaviour is a base mechanic, not a
+            // trait, so it must remain vanilla.
         }
 
-        private static bool IsBlockedTrait(Trait trait)
-        {
-            if (trait == null || string.IsNullOrEmpty(trait.Id))
-            {
-                return true;
-            }
-
-            string id = trait.Id;
-
-            // 基础特质由调用方保留；None 是无效果占位特质。
-            if (id == "None")
-            {
-                return false;
-            }
-
-            // 授予技能的特质：保证新复制人没有任何技能。
-            if (id.StartsWith("GrantSkill_", StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            if (id == "Minnow" ||
-                id.StartsWith("BionicUpgrade_Skill", StringComparison.Ordinal) ||
-                id.StartsWith("BionicUpgrade_SkilledWorker", StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            // 仿生复制人的故障特质全部视为负面。
-            if (id.StartsWith("BionicBug", StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            // 会禁用某类工作的特质（例如不能攻击/不能建造/不能研究）一律移除。
-            if (trait.disabledChoreGroups != null && trait.disabledChoreGroups.Length > 0)
-            {
-                return true;
-            }
-
-            if (trait.PositiveTrait)
-            {
-                return false;
-            }
-
-            if (KeepBeneficial.Contains(id))
-            {
-                return false;
-            }
-
-            // 其余非正面特质全部视为需要移除的负面/有害特质。
-            return true;
-        }
     }
 
     [HarmonyPatch(typeof(MinionStartingStats), "GenerateAptitudes")]
@@ -215,7 +219,7 @@ namespace ONIStarter
                 return;
             }
 
-            // 仿生复制人没有兴趣系统，保持原样。
+            // Bionic duplicants have no aptitude system; leave them as-is.
             if (__instance.personality.model == BionicMinionConfig.MODEL)
             {
                 return;
@@ -251,27 +255,33 @@ namespace ONIStarter
         }
     }
 
-    [HarmonyPatch(typeof(MinionStartingStats), "GenerateStats")]
-    public static class StartingStatsSanitizePatch
+    [HarmonyPatch(typeof(MinionStartingStats), "GenerateTraits")]
+    public static class GeneratedTraitsSanitizePatch
     {
-        public static void Postfix(MinionStartingStats __instance)
+        public static void Postfix(
+            MinionStartingStats __instance,
+            List<ChoreGroup> disabled_chore_groups,
+            ref int __result)
         {
-            DuplicantSanitizer.SanitizeStartingStats(__instance);
+            __result = DuplicantSanitizer.SanitizeGeneratedTraits(
+                __instance,
+                disabled_chore_groups,
+                __result);
         }
     }
 
     [HarmonyPatch(typeof(MinionStartingStats), nameof(MinionStartingStats.Apply))]
     public static class SpawnedDuplicantSanitizePatch
     {
-        public static void Postfix(GameObject go)
+        public static void Postfix(MinionStartingStats __instance, GameObject go)
         {
-            DuplicantSanitizer.SanitizeSpawnedDuplicant(go);
+            DuplicantSanitizer.SanitizeSpawnedDuplicant(go, __instance);
         }
     }
 
     /// <summary>
-    /// 技能树全部点满后，不再继续累积技能点/技能经验。
-    /// 只拦截“技能点经验”，属性经验不受影响。
+    /// Stops skill points and skill experience from accumulating once the whole
+    /// skill tree is mastered. Attribute experience is not affected.
     /// </summary>
     [HarmonyPatch(typeof(MinionResume), nameof(MinionResume.AddExperience))]
     public static class SkillPointCapPatch
@@ -291,7 +301,7 @@ namespace ONIStarter
             MinionIdentity identity = __instance.GetComponent<MinionIdentity>();
             if (identity == null || identity.model == BionicMinionConfig.MODEL)
             {
-                // 仿生复制人目前完全保持原版。
+                // Bionic duplicants are intentionally left untouched.
                 return true;
             }
 
@@ -333,7 +343,8 @@ namespace ONIStarter
                 }
             }
 
-            // 仿生复制人没有普通技能树，不强行改变其行为。
+            // Bionic duplicants do not use the normal skill tree; do not force
+            // any behaviour change for them.
             return total > 0 && mastered >= total;
         }
     }

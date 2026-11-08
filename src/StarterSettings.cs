@@ -14,8 +14,9 @@ namespace ONIStarter
     }
 
     /// <summary>
-    /// Mod 自身的设置。默认全部关闭，首次安装保持原版行为。
-    /// 只从主菜单的 Mod 列表进入设置，不在游戏内增加入口。
+    /// Mod settings. Everything is disabled by default so a fresh install
+    /// behaves like vanilla. The settings screen is reachable only from the
+    /// main-menu Mods list; no in-game entry points are added.
     /// </summary>
     public static class StarterSettings
     {
