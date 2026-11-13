@@ -111,6 +111,11 @@ namespace ONIStarter
             AutoPrintController.RegisterPrintableTags();
         }
 
+        public static bool IsAutoPrintTarget(GameObject target)
+        {
+            return target != null && target.GetComponent<AutoPrintController>() != null;
+        }
+
         public static GameObject GetSideScreenTarget(TreeFilterableSideScreen screen)
         {
             if (screen == null || TargetField == null)
@@ -122,14 +127,182 @@ namespace ONIStarter
         }
     }
 
+    /// <summary>
+    /// Keeps the auto-print list out of the right-hand side screen and shows it
+    /// in DetailsScreen's secondary side screen, which renders to the left of
+    /// the main panel. The prefab is reused from the game's side-screen list,
+    /// so the existing search box and checkboxes keep working unchanged.
+    /// </summary>
+    public static class AutoPrintSecondaryScreenPanel
+    {
+        private const string PanelTitle = "自动打印列表";
+
+        private static readonly FieldInfo SideScreensField = typeof(DetailsScreen).GetField(
+            "sideScreens",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private static readonly FieldInfo ActiveSecondaryField = typeof(DetailsScreen).GetField(
+            "activeSideScreen2",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private static TreeFilterableSideScreen activeScreen;
+        private static bool failureLogged;
+
+        public static bool CanDetach()
+        {
+            return FindPrefab(DetailsScreen.Instance) != null;
+        }
+
+        public static void Refresh(DetailsScreen screen, GameObject target)
+        {
+            if (screen == null)
+            {
+                return;
+            }
+
+            if (!AutoPrintSetup.IsAutoPrintTarget(target))
+            {
+                ClearIfOurs(screen);
+                return;
+            }
+
+            TreeFilterableSideScreen prefab = FindPrefab(screen);
+            if (prefab == null)
+            {
+                // Keep the right-hand placement as a fallback.
+                ClearIfOurs(screen);
+                return;
+            }
+
+            KScreen secondary = screen.SetSecondarySideScreen(prefab, PanelTitle);
+            TreeFilterableSideScreen list = secondary as TreeFilterableSideScreen;
+            if (list == null)
+            {
+                return;
+            }
+
+            activeScreen = list;
+            list.SetTarget(target);
+        }
+
+        public static void ClearIfOurs(DetailsScreen screen)
+        {
+            if (screen == null)
+            {
+                activeScreen = null;
+                return;
+            }
+
+            bool isOurs;
+            if (ActiveSecondaryField != null)
+            {
+                KScreen current = ActiveSecondaryField.GetValue(screen) as KScreen;
+                isOurs = activeScreen != null && current == activeScreen;
+            }
+            else
+            {
+                // If the field cannot be found, fall back to checking whether
+                // the screen we created is still active. Another feature that
+                // took over the panel would have deactivated it first.
+                isOurs = activeScreen != null && activeScreen.gameObject != null && activeScreen.gameObject.activeSelf;
+            }
+
+            if (isOurs)
+            {
+                screen.ClearSecondarySideScreen();
+            }
+
+            activeScreen = null;
+        }
+
+        public static void LogFailure(Exception exception)
+        {
+            if (failureLogged)
+            {
+                return;
+            }
+
+            failureLogged = true;
+            Debug.LogWarning("[ONI-Starter] 自动打印列表面板切换失败：" + exception);
+        }
+
+        private static TreeFilterableSideScreen FindPrefab(DetailsScreen screen)
+        {
+            if (screen == null || SideScreensField == null)
+            {
+                return null;
+            }
+
+            List<DetailsScreen.SideScreenRef> sideScreens;
+            try
+            {
+                sideScreens = SideScreensField.GetValue(screen) as List<DetailsScreen.SideScreenRef>;
+            }
+            catch (Exception exception)
+            {
+                LogFailure(exception);
+                return null;
+            }
+
+            if (sideScreens == null)
+            {
+                return null;
+            }
+
+            foreach (DetailsScreen.SideScreenRef sideScreen in sideScreens)
+            {
+                if (sideScreen != null && sideScreen.screenPrefab is TreeFilterableSideScreen treeFilter)
+                {
+                    return treeFilter;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    [HarmonyPatch(typeof(DetailsScreen), nameof(DetailsScreen.Refresh))]
+    public static class AutoPrintSecondaryPanelRefreshPatch
+    {
+        public static void Postfix(DetailsScreen __instance, GameObject go)
+        {
+            try
+            {
+                AutoPrintSecondaryScreenPanel.Refresh(__instance, go);
+            }
+            catch (Exception exception)
+            {
+                AutoPrintSecondaryScreenPanel.LogFailure(exception);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(DetailsScreen), nameof(DetailsScreen.DeactivateSideContent))]
+    public static class AutoPrintSecondaryPanelDeactivatePatch
+    {
+        public static void Postfix(DetailsScreen __instance)
+        {
+            try
+            {
+                AutoPrintSecondaryScreenPanel.ClearIfOurs(__instance);
+            }
+            catch (Exception exception)
+            {
+                AutoPrintSecondaryScreenPanel.LogFailure(exception);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(TreeFilterableSideScreen), nameof(TreeFilterableSideScreen.IsValidForTarget))]
     public static class AutoPrintSideScreenValidPatch
     {
         public static bool Prefix(GameObject target, ref bool __result)
         {
-            if (target != null && target.GetComponent<AutoPrintController>() != null)
+            if (AutoPrintSetup.IsAutoPrintTarget(target))
             {
-                __result = true;
+                // The list is shown in the secondary (left) panel. If that
+                // panel is unavailable, fall back to the right-hand panel.
+                __result = !AutoPrintSecondaryScreenPanel.CanDetach();
                 return false;
             }
 
@@ -143,7 +316,7 @@ namespace ONIStarter
         public static void Postfix(TreeFilterableSideScreen __instance, ref bool __result)
         {
             GameObject target = AutoPrintSetup.GetSideScreenTarget(__instance);
-            if (target != null && target.GetComponent<AutoPrintController>() != null)
+            if (AutoPrintSetup.IsAutoPrintTarget(target))
             {
                 // Hide the "0 kg" storage suffix after each item.
                 __result = false;
@@ -163,7 +336,7 @@ namespace ONIStarter
             }
 
             GameObject target = AutoPrintSetup.GetSideScreenTarget(screen);
-            if (target != null && target.GetComponent<AutoPrintController>() != null)
+            if (AutoPrintSetup.IsAutoPrintTarget(target))
             {
                 __result = "自动打印列表";
             }

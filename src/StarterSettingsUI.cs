@@ -18,7 +18,7 @@ namespace ONIStarter
     public sealed class StarterSettingsScreen : KModalScreen
     {
         private const float PanelWidth = 640f;
-        private const float PanelHeight = 660f;
+        private const float PanelHeight = 760f;
         private const float TitleBarHeight = 34f;
         private const float RowHeight = 56f;
 
@@ -285,10 +285,31 @@ namespace ONIStarter
                 },
                 new SettingRow
                 {
+                    Title = "打印舱选项刷新",
+                    Description = "在打印舱的“选择蓝图”界面中，为复制人和补给包的标题右侧显示刷新按钮。",
+                    Getter = () => StarterSettings.PrintPodRefresh,
+                    Setter = value => StarterSettings.PrintPodRefresh = value
+                },
+                new SettingRow
+                {
+                    Title = "机械飞升",
+                    Description = "打印舱前可在标准复制人与仿生人之间转换；两种转换都会清空技能点。",
+                    Getter = () => StarterSettings.MechanicalAscension,
+                    Setter = value => StarterSettings.MechanicalAscension = value
+                },
+                new SettingRow
+                {
                     Title = "技能点满级不增加",
                     Description = "当前技能树全部点满后，停止继续增长技能点。",
                     Getter = () => StarterSettings.SkillPointCap,
                     Setter = value => StarterSettings.SkillPointCap = value
+                },
+                new SettingRow
+                {
+                    Title = "自动破碎流星",
+                    Description = "流星刚进入地图即被击碎，碎裂后掉落少量资源；灾星事件不受影响。",
+                    Getter = () => StarterSettings.AutoShatterMeteors,
+                    Setter = value => StarterSettings.AutoShatterMeteors = value
                 }
             };
 
@@ -385,6 +406,7 @@ namespace ONIStarter
                 content.gameObject,
                 "Notes",
                 "简化复制人仅作用于标准复制人，仿生复制人保持原版。\n"
+                + "机械飞升需要启用《仿生助推器》DLC；转换后技能点清零。\n"
                 + "技能点满级不增加同样只作用于标准复制人。\n"
                 + "设置保存在本地配置文件中，所有存档共用。",
                 12f,

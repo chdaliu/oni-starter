@@ -11,6 +11,9 @@ namespace ONIStarter
         public bool simplifyDuplicants;
         public bool autoPrint;
         public bool skillPointCap;
+        public bool printPodRefresh;
+        public bool mechanicalAscension;
+        public bool autoShatterMeteors;
     }
 
     /// <summary>
@@ -76,6 +79,48 @@ namespace ONIStarter
             {
                 EnsureLoaded();
                 data.skillPointCap = value;
+            }
+        }
+
+        public static bool PrintPodRefresh
+        {
+            get
+            {
+                EnsureLoaded();
+                return data.printPodRefresh;
+            }
+            set
+            {
+                EnsureLoaded();
+                data.printPodRefresh = value;
+            }
+        }
+
+        public static bool MechanicalAscension
+        {
+            get
+            {
+                EnsureLoaded();
+                return data.mechanicalAscension;
+            }
+            set
+            {
+                EnsureLoaded();
+                data.mechanicalAscension = value;
+            }
+        }
+
+        public static bool AutoShatterMeteors
+        {
+            get
+            {
+                EnsureLoaded();
+                return data.autoShatterMeteors;
+            }
+            set
+            {
+                EnsureLoaded();
+                data.autoShatterMeteors = value;
             }
         }
 
