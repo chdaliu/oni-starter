@@ -14,7 +14,7 @@ A quality-of-life mod for Oxygen Not Included. Compatible with all DLCs and mixe
 - 设置界面采用类似 DGSM 的面板样式，使用勾选框开关各项功能，不需要反复点击按钮切换。
 - 不会在游戏内、暂停菜单、选项菜单或打印舱上增加设置入口。
 
-### 7 个勾选项
+### 8 个勾选项
 
 默认全部关闭，首次安装保持原版行为。
 
@@ -27,6 +27,7 @@ A quality-of-life mod for Oxygen Not Included. Compatible with all DLCs and mixe
 | **机械飞升** | 打印舱前可在标准复制人与仿生人之间转换，转换后永久清空技能点 |
 | **技能点满级不增加** | 仅标准复制人：技能树点满后停止增长技能点 |
 | **自动破碎流星** | 流星刚进入地图即被击碎，碎裂后掉落少量资源；灾星事件不受影响 |
+| **动物不主动攻击复制人** | 动物不会主动锁定标准复制人或仿生复制人；被复制人攻击时仍按原版反击 |
 
 ### 各功能说明
 
@@ -94,6 +95,14 @@ A quality-of-life mod for Oxygen Not Included. Compatible with all DLCs and mixe
 - 只作用于常规流星；DLC4 的**灾星事件**（大型撞击小行星）、地热喷泉的小流星、以及会送来喷气牛的**牛流星**不受影响。
 - 关闭后恢复原版流星撞击逻辑。
 
+#### 动物不主动攻击复制人
+
+- 开启后，动物不会主动把标准复制人或仿生复制人作为攻击目标。
+- 辐射蜂、保护蛋的抛壳蟹等敌对动物不再主动攻击复制人。
+- 复制人主动攻击动物时，动物仍会按原版逻辑反击或逃跑。
+- 食人树（试验体52B）属于植物，不在此功能范围内，保持原版攻击行为。
+- 关闭后恢复原版动物索敌逻辑。
+
 ### 配置保存
 
 设置：
@@ -129,7 +138,7 @@ A quality-of-life mod for Oxygen Not Included. Compatible with all DLCs and mixe
 
 - 本项目已通过 `dotnet build -c Release` 编译验证。
 - 复制人规则作用于新生成、打印以及通过低温舱/剧情等获得的标准复制人；已经存在的旧复制人不会被强制洗点。
-- 仿生复制人当前不参与任何复制人修改。
+- 仿生复制人不会受到“简化复制人”和“技能点满级不增加”的修改；“动物不主动攻击复制人”会同时保护标准复制人与仿生复制人。
 
 ---
 
@@ -143,7 +152,7 @@ A quality-of-life mod for Oxygen Not Included. Compatible with all DLCs and mixe
 - No additional entry points are added in game, in the pause menu, in the
   options menu, or on the printing pod.
 
-### Seven checkboxes
+### Eight checkboxes
 
 Everything is disabled by default, so a fresh install behaves like vanilla.
 
@@ -156,6 +165,7 @@ Everything is disabled by default, so a fresh install behaves like vanilla.
 | **Mechanical ascension** | Convert standard duplicants to bionics and back at the printing pod; both conversions permanently clear skill points |
 | **Skill point cap** | Standard duplicants only: stop gaining skill points after the skill tree is fully mastered |
 | **Auto shatter meteors** | Meteors are shattered as soon as they enter the map, dropping a small amount of resources; the calamity event is unaffected |
+| **Animals do not attack duplicants** | Animals do not proactively target standard or bionic duplicants; they still retaliate normally when attacked by a duplicant |
 
 ### Feature details
 
@@ -243,6 +253,18 @@ Applies to standard duplicants only:
   deliver a live Gassy Moo) keep their vanilla behaviour.
 - Disabling it restores vanilla meteor impacts.
 
+#### Animals do not attack duplicants
+
+- While enabled, animals do not proactively select standard or bionic
+  duplicants as attack targets.
+- Hostile animals such as Beetas and egg-guarding Pokeshells no longer attack
+  duplicants on their own.
+- If a duplicant attacks an animal, the animal still retaliates or flees using
+  vanilla behaviour.
+- The Sap Tree (Experiment 52B) is a plant and is not covered by this setting;
+  it keeps its vanilla attack behaviour.
+- Disabling it restores vanilla animal targeting.
+
 ### Configuration files
 
 Settings:
@@ -282,4 +304,4 @@ The build deploys to:
 - Duplicant rules apply to newly generated duplicants, printed duplicants, and
   standard duplicants obtained through cryo pods/story content. Existing old
   duplicants are not forcibly re-specced.
-- Bionic duplicants are currently excluded from all duplicant modifications.
+- Bionic duplicants are excluded from **Simplify duplicants** and **Skill point cap**. **Animals do not attack duplicants** protects both standard and bionic duplicants.

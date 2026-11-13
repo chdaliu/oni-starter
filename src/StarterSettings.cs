@@ -14,6 +14,7 @@ namespace ONIStarter
         public bool printPodRefresh;
         public bool mechanicalAscension;
         public bool autoShatterMeteors;
+        public bool noAnimalAttacks;
     }
 
     /// <summary>
@@ -121,6 +122,20 @@ namespace ONIStarter
             {
                 EnsureLoaded();
                 data.autoShatterMeteors = value;
+            }
+        }
+
+        public static bool NoAnimalAttacks
+        {
+            get
+            {
+                EnsureLoaded();
+                return data.noAnimalAttacks;
+            }
+            set
+            {
+                EnsureLoaded();
+                data.noAnimalAttacks = value;
             }
         }
 

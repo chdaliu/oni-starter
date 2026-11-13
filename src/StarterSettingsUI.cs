@@ -18,9 +18,9 @@ namespace ONIStarter
     public sealed class StarterSettingsScreen : KModalScreen
     {
         private const float PanelWidth = 640f;
-        private const float PanelHeight = 760f;
+        private const float PanelHeight = 800f;
         private const float TitleBarHeight = 34f;
-        private const float RowHeight = 56f;
+        private const float RowHeight = 50f;
 
         private static readonly Color PanelColor = new Color(0.243f, 0.263f, 0.341f, 1f);
         private static readonly Color TitleBarColor = new Color(0.529f, 0.271f, 0.4f, 1f);
@@ -226,11 +226,11 @@ namespace ONIStarter
             RectTransform rect = contentObject.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(20f, 60f);
-            rect.offsetMax = new Vector2(-20f, -(TitleBarHeight + 16f));
+            rect.offsetMin = new Vector2(14f, 50f);
+            rect.offsetMax = new Vector2(-14f, -(TitleBarHeight + 10f));
 
             VerticalLayoutGroup layout = contentObject.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 10f;
+            layout.spacing = 6f;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
@@ -252,8 +252,8 @@ namespace ONIStarter
             if (headerObject != null)
             {
                 LayoutElement layoutElement = headerObject.AddComponent<LayoutElement>();
-                layoutElement.preferredHeight = 28f;
-                layoutElement.minHeight = 28f;
+                layoutElement.preferredHeight = 24f;
+                layoutElement.minHeight = 24f;
                 layoutElement.flexibleWidth = 1f;
             }
         }
@@ -310,6 +310,13 @@ namespace ONIStarter
                     Description = "流星刚进入地图即被击碎，碎裂后掉落少量资源；灾星事件不受影响。",
                     Getter = () => StarterSettings.AutoShatterMeteors,
                     Setter = value => StarterSettings.AutoShatterMeteors = value
+                },
+                new SettingRow
+                {
+                    Title = "动物不主动攻击复制人",
+                    Description = "动物不会主动攻击复制人或仿生复制人；复制人攻击动物时，动物仍会按原版反击。",
+                    Getter = () => StarterSettings.NoAnimalAttacks,
+                    Setter = value => StarterSettings.NoAnimalAttacks = value
                 }
             };
 
@@ -358,8 +365,8 @@ namespace ONIStarter
                 titleRect.anchorMin = new Vector2(0f, 0.5f);
                 titleRect.anchorMax = new Vector2(0f, 0.5f);
                 titleRect.pivot = new Vector2(0f, 0.5f);
-                titleRect.anchoredPosition = new Vector2(32f, 14f);
-                titleRect.sizeDelta = new Vector2(PanelWidth - 76f, 26f);
+                titleRect.anchoredPosition = new Vector2(26f, 12f);
+                titleRect.sizeDelta = new Vector2(PanelWidth - 68f, 22f);
 
                 ToolTip tooltip = titleObject.AddComponent<ToolTip>();
                 tooltip.toolTip = row.Description;
@@ -379,8 +386,8 @@ namespace ONIStarter
                 descriptionRect.anchorMin = new Vector2(0f, 0.5f);
                 descriptionRect.anchorMax = new Vector2(0f, 0.5f);
                 descriptionRect.pivot = new Vector2(0f, 0.5f);
-                descriptionRect.anchoredPosition = new Vector2(32f, -14f);
-                descriptionRect.sizeDelta = new Vector2(PanelWidth - 76f, 22f);
+                descriptionRect.anchoredPosition = new Vector2(26f, -12f);
+                descriptionRect.sizeDelta = new Vector2(PanelWidth - 68f, 18f);
             }
         }
 
@@ -397,8 +404,8 @@ namespace ONIStarter
             if (headerObject != null)
             {
                 LayoutElement layoutElement = headerObject.AddComponent<LayoutElement>();
-                layoutElement.preferredHeight = 28f;
-                layoutElement.minHeight = 28f;
+                layoutElement.preferredHeight = 24f;
+                layoutElement.minHeight = 24f;
                 layoutElement.flexibleWidth = 1f;
             }
 
@@ -507,7 +514,7 @@ namespace ONIStarter
                 hintRect.anchorMin = new Vector2(0f, 0f);
                 hintRect.anchorMax = new Vector2(0f, 0f);
                 hintRect.pivot = new Vector2(0f, 0f);
-                hintRect.anchoredPosition = new Vector2(20f, 12f);
+                hintRect.anchoredPosition = new Vector2(14f, 12f);
                 hintRect.sizeDelta = new Vector2(300f, 30f);
             }
 
@@ -526,7 +533,7 @@ namespace ONIStarter
             rect.anchorMin = new Vector2(1f, 0f);
             rect.anchorMax = new Vector2(1f, 0f);
             rect.pivot = new Vector2(1f, 0f);
-            rect.anchoredPosition = new Vector2(-20f, 12f);
+            rect.anchoredPosition = new Vector2(-14f, 12f);
             rect.sizeDelta = new Vector2(100f, 30f);
         }
 

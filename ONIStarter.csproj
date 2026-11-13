@@ -11,7 +11,7 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <AssemblyTitle>ONI-Starter</AssemblyTitle>
     <Product>新手套装</Product>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
     <DebugType>none</DebugType>
     <NoWarn>CS0436;CS0618</NoWarn>
 
